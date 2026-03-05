@@ -1,42 +1,42 @@
 # Intune Policy Description Generator
 
-Ein lokales Tool, das alle Microsoft Intune Policies aus einem Tenant abruft und mithilfe von Azure OpenAI automatisch aussagekraftige Beschreibungen generiert. Die generierten Beschreibungen koennen direkt zurueck nach Intune geschrieben werden.
+A local tool that fetches all Microsoft Intune policies from a tenant and automatically generates meaningful descriptions using Azure OpenAI. Generated descriptions can be written back to Intune directly.
 
 ---
 
-## Inhaltsverzeichnis
+## Table of Contents
 
-1. [Ueberblick](#ueberblick)
-2. [Architektur](#architektur)
-3. [Unterstuetzte Policy-Typen](#unterstuetzte-policy-typen)
-4. [Voraussetzungen](#voraussetzungen)
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Supported Policy Types](#supported-policy-types)
+4. [Prerequisites](#prerequisites)
 5. [Installation](#installation)
-6. [Konfiguration](#konfiguration)
-7. [Anwendung starten](#anwendung-starten)
-8. [Bedienung](#bedienung)
-9. [API-Referenz](#api-referenz)
-10. [Projektstruktur](#projektstruktur)
-11. [Fehlerbehebung](#fehlerbehebung)
-12. [Sicherheitshinweise](#sicherheitshinweise)
+6. [Configuration](#configuration)
+7. [Running the Application](#running-the-application)
+8. [Usage](#usage)
+9. [API Reference](#api-reference)
+10. [Project Structure](#project-structure)
+11. [Troubleshooting](#troubleshooting)
+12. [Security Notes](#security-notes)
 
 ---
 
-## Ueberblick
+## Overview
 
-Viele Intune-Policies haben keine oder nur unzureichende Beschreibungen. Dieses Tool loest das Problem:
+Many Intune policies have no or inadequate descriptions. This tool solves that problem:
 
-1. **Abrufen** - Laedt alle Policies aus dem Intune-Tenant via Microsoft Graph API (Beta)
-2. **Analysieren** - Sendet die vollstaendige Policy-Konfiguration (JSON) an Azure OpenAI
-3. **Generieren** - Erzeugt strukturierte, verstaendliche Beschreibungen pro Policy
-4. **Vergleichen** - Zeigt Vorher/Nachher-Ansicht (Original vs. generierte Beschreibung)
-5. **Zurueckschreiben** - Schreibt ausgewaehlte Beschreibungen direkt in Intune zurueck
+1. **Fetch** - Loads all policies from the Intune tenant via Microsoft Graph API (Beta)
+2. **Analyze** - Sends the complete policy configuration (JSON) to Azure OpenAI
+3. **Generate** - Creates structured, human-readable descriptions per policy
+4. **Compare** - Shows a before/after view (original vs. generated description)
+5. **Write Back** - Pushes selected descriptions directly back to Intune
 
-<!-- SCREENSHOT: Login-Screen mit "Sign in with Microsoft" Button -->
-<!-- Dateiname: screenshot_01_login.png -->
+<!-- SCREENSHOT: Login screen with "Sign in with Microsoft" button -->
+<!-- Filename: screenshot_01_login.png -->
 
 ---
 
-## Architektur
+## Architecture
 
 ```
 +------------------+         +------------------+         +---------------------+
@@ -61,117 +61,116 @@ Viele Intune-Policies haben keine oder nur unzureichende Beschreibungen. Dieses 
 
 ### Frontend (React + TypeScript + Vite + Tailwind CSS)
 
-- Single-Page-Application mit Glassmorphism-Design
-- Kommuniziert ueber `/api/*` Proxy mit dem Backend
-- Komponenten:
-  - `PolicyList` - Tabelle aller Policies mit Suche, Filter, Mehrfachauswahl
-  - `SettingsPanel` - LLM-Einstellungen (System Prompt, Template, Custom Instructions)
-  - `GenerationProgress` - Fortschrittsbalken waehrend der Generierung
-  - `DescriptionResult` - Vorher/Nachher-Vergleich mit Intune-Update-Funktion
+- Single-page application with glassmorphism design
+- Communicates with backend via `/api/*` proxy
+- Components:
+  - `PolicyList` - Table of all policies with search, filter, multi-select
+  - `SettingsPanel` - LLM settings (system prompt, template, custom instructions)
+  - `GenerationProgress` - Progress bar during generation
+  - `DescriptionResult` - Before/after comparison with Intune update functionality
 
 ### Backend (Python + FastAPI)
 
-- REST-API mit asynchroner Verarbeitung
-- MSAL-basierte Authentifizierung (interaktiver Browser-Login)
-- Microsoft Graph API Client mit automatischer Token-Erneuerung und Pagination
-- Azure OpenAI Integration fuer die Beschreibungsgenerierung
-- LLM-Settings werden lokal in `llm_settings.json` persistiert
+- REST API with asynchronous processing
+- MSAL-based authentication (interactive browser login)
+- Microsoft Graph API client with automatic token renewal and pagination
+- Azure OpenAI integration for description generation
+- LLM settings persisted locally in `llm_settings.json`
 
 ---
 
-## Unterstuetzte Policy-Typen
+## Supported Policy Types
 
-| Policy-Typ | Graph API Endpoint | Lesend | Schreibend |
+| Policy Type | Graph API Endpoint | Read | Write |
 |---|---|---|---|
-| Device Configuration | `/deviceManagement/deviceConfigurations` | Ja | Ja |
-| Settings Catalog | `/deviceManagement/configurationPolicies` | Ja (inkl. Settings) | Ja |
-| Compliance Policy | `/deviceManagement/deviceCompliancePolicies` | Ja | Ja |
-| App Protection | `/deviceAppManagement/managedAppPolicies` | Ja | Ja |
-| Conditional Access | `/identity/conditionalAccess/policies` | Ja | Nein |
-| Endpoint Security | `/deviceManagement/intents` | Ja (inkl. Categories) | Ja |
-| App Configuration | `/deviceAppManagement/mobileAppConfigurations` | Ja | Ja |
-| Autopilot | `/deviceManagement/windowsAutopilotDeploymentProfiles` | Ja | Nein |
-| Device Enrollment | `/deviceManagement/deviceEnrollmentConfigurations` | Ja | Nein |
-| Remediation Script | `/deviceManagement/deviceHealthScripts` | Ja | Nein |
-| PowerShell Script | `/deviceManagement/deviceManagementScripts` | Ja | Nein |
-| Group Policy (ADMX) | `/deviceManagement/groupPolicyConfigurations` | Ja (inkl. Definition Values) | Ja |
+| Device Configuration | `/deviceManagement/deviceConfigurations` | Yes | Yes |
+| Settings Catalog | `/deviceManagement/configurationPolicies` | Yes (incl. settings) | Yes |
+| Compliance Policy | `/deviceManagement/deviceCompliancePolicies` | Yes | Yes |
+| App Protection | `/deviceAppManagement/managedAppPolicies` | Yes | Yes |
+| Conditional Access | `/identity/conditionalAccess/policies` | Yes | No |
+| Endpoint Security | `/deviceManagement/intents` | Yes (incl. categories) | Yes |
+| App Configuration | `/deviceAppManagement/mobileAppConfigurations` | Yes | Yes |
+| Autopilot | `/deviceManagement/windowsAutopilotDeploymentProfiles` | Yes | No |
+| Device Enrollment | `/deviceManagement/deviceEnrollmentConfigurations` | Yes | No |
+| Remediation Script | `/deviceManagement/deviceHealthScripts` | Yes | No |
+| PowerShell Script | `/deviceManagement/deviceManagementScripts` | Yes | No |
+| Group Policy (ADMX) | `/deviceManagement/groupPolicyConfigurations` | Yes (incl. definition values) | Yes |
 
-> **Hinweis:** "Schreibend" bedeutet, dass der Description-Wert ueber die Graph API per PATCH aktualisiert werden kann. Nicht alle Policy-Typen unterstuetzen das.
+> **Note:** "Write" means the description value can be updated via the Graph API using PATCH. Not all policy types support this.
 
 ---
 
-## Voraussetzungen
+## Prerequisites
 
 ### System
 
-- **Python 3.11 - 3.13** (Python 3.14 wird derzeit nicht unterstuetzt wegen pydantic-core Build-Problemen)
-- **Node.js 18+** mit npm
-- **Azure CLI** (`az`) installiert und im PATH
-- **Webbrowser** fuer den interaktiven Microsoft-Login
+- **Python 3.11 - 3.13** (Python 3.14 is currently not supported due to pydantic-core build issues)
+- **Node.js 18+** with npm
+- **Azure CLI** (`az`) installed and available in PATH
+- **Web browser** for interactive Microsoft login
 
 ### Azure
 
-- **Azure-Tenant** mit Microsoft Intune Lizenz
-- **Azure OpenAI Service** mit einem Deployment (z.B. `gpt-5-mini`)
+- **Azure tenant** with Microsoft Intune license
+- **Azure OpenAI Service** with a deployment (e.g. `gpt-5-mini`)
   - Endpoint URL
   - API Key
-  - Deployment Name
+  - Deployment name
 
-### Berechtigungen
+### Permissions
 
-Die Anwendung verwendet die Microsoft Graph PowerShell App Registration (Client ID: `14d82eec-204b-4c2f-b7e8-296a70dab67e`), die fuer Graph APIs vorregistriert ist. Folgende Scopes werden angefordert:
+The application uses the Microsoft Graph PowerShell app registration (Client ID: `14d82eec-204b-4c2f-b7e8-296a70dab67e`), which is pre-consented for Graph APIs. The following scopes are requested:
 
-| Scope | Zweck |
+| Scope | Purpose |
 |---|---|
-| `DeviceManagementConfiguration.Read.All` | Lesen von Device Configurations, Settings Catalog, Endpoint Security |
-| `DeviceManagementConfiguration.ReadWrite.All` | Beschreibungen in Intune zurueckschreiben |
-| `DeviceManagementManagedDevices.Read.All` | Lesen von Geraete-bezogenen Policies |
-| `DeviceManagementApps.Read.All` | Lesen von App Protection/Configuration Policies |
-| `DeviceManagementServiceConfig.Read.All` | Lesen von Enrollment-Konfigurationen |
-| `Policy.Read.All` | Lesen von Conditional Access Policies |
+| `DeviceManagementConfiguration.Read.All` | Read device configurations, settings catalog, endpoint security |
+| `DeviceManagementConfiguration.ReadWrite.All` | Write descriptions back to Intune |
+| `DeviceManagementManagedDevices.Read.All` | Read device-related policies |
+| `DeviceManagementApps.Read.All` | Read app protection/configuration policies |
+| `DeviceManagementServiceConfig.Read.All` | Read enrollment configurations |
+| `Policy.Read.All` | Read conditional access policies |
 
-> Der angemeldete Benutzer muss diese Berechtigungen im Tenant haben (oder ein Admin muss sie consenten).
+> The signed-in user must have these permissions in the tenant (or an admin must consent them).
 
 ---
 
 ## Installation
 
-### 1. Repository klonen
+### 1. Clone the repository
 
 ```bash
-cd /pfad/zu/deinem/workspace
-git clone <repo-url> IntunePolicy
-cd IntunePolicy
+git clone https://github.com/JayRHa/Intune-Policy-Description-Generator.git
+cd Intune-Policy-Description-Generator
 ```
 
-### 2. Backend einrichten
+### 2. Set up the backend
 
 ```bash
 cd backend
 
-# Virtuelle Umgebung erstellen (Python 3.13 empfohlen)
+# Create virtual environment (Python 3.13 recommended)
 python3.13 -m venv venv
 source venv/bin/activate   # macOS/Linux
 # venv\Scripts\activate    # Windows
 
-# Abhaengigkeiten installieren
+# Install dependencies
 pip install -r requirements.txt
-pip install msal            # MSAL wird zusaetzlich benoetigt
+pip install msal
 ```
 
-**requirements.txt beinhaltet:**
+**requirements.txt includes:**
 
-| Paket | Version | Zweck |
+| Package | Version | Purpose |
 |---|---|---|
-| fastapi | 0.115.6 | Web-Framework |
-| uvicorn | 0.34.0 | ASGI Server |
-| httpx | 0.28.1 | Async HTTP Client fuer Graph API |
+| fastapi | 0.115.6 | Web framework |
+| uvicorn | 0.34.0 | ASGI server |
+| httpx | 0.28.1 | Async HTTP client for Graph API |
 | openai | 1.58.1 | Azure OpenAI SDK |
-| pydantic | 2.10.4 | Datenvalidierung |
-| pydantic-settings | 2.7.1 | Environment-basierte Settings |
-| python-dotenv | 1.0.1 | .env Datei laden |
+| pydantic | 2.10.4 | Data validation |
+| pydantic-settings | 2.7.1 | Environment-based settings |
+| python-dotenv | 1.0.1 | Load .env files |
 
-### 3. Frontend einrichten
+### 3. Set up the frontend
 
 ```bash
 cd frontend
@@ -180,30 +179,30 @@ npm install
 
 ---
 
-## Konfiguration
+## Configuration
 
 ### Azure OpenAI Credentials
 
-Erstelle eine `.env`-Datei im `backend/`-Verzeichnis:
+Create a `.env` file in the `backend/` directory:
 
 ```bash
 cp .env.example backend/.env
 ```
 
-Bearbeite `backend/.env`:
+Edit `backend/.env`:
 
 ```env
-AZURE_OPENAI_ENDPOINT=https://dein-resource-name.openai.azure.com
-AZURE_OPENAI_API_KEY=dein-api-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
+AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT=gpt-5-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 
-> **Wichtig:** Die `.env`-Datei darf nicht in Git eingecheckt werden. Sie ist bereits in `.gitignore` enthalten.
+> **Important:** The `.env` file must not be committed to Git. It is already included in `.gitignore`.
 
-### LLM-Einstellungen (optional)
+### LLM Settings (optional)
 
-Die LLM-Einstellungen (System Prompt, Template, Custom Instructions) koennen ueber die Web-Oberflaeche angepasst werden. Sie werden in `backend/llm_settings.json` gespeichert und ueberleben Neustarts.
+LLM settings (system prompt, template, custom instructions) can be adjusted via the web interface. They are stored in `backend/llm_settings.json` and persist across restarts.
 
 **Default System Prompt:**
 
@@ -223,9 +222,9 @@ Die LLM-Einstellungen (System Prompt, Template, Custom Instructions) koennen ueb
 
 ---
 
-## Anwendung starten
+## Running the Application
 
-### Option A: Manuell (empfohlen fuer Entwicklung)
+### Option A: Manual (recommended for development)
 
 **Terminal 1 - Backend:**
 
@@ -242,15 +241,15 @@ cd frontend
 npm run dev
 ```
 
-### Option B: Start-Script
+### Option B: Start script
 
 ```bash
-# Vorher: Port in start.sh ggf. anpassen (default: 8000)
+# Note: adjust port in start.sh if needed (default: 8000)
 chmod +x start.sh
 ./start.sh
 ```
 
-> **Hinweis:** Stelle sicher, dass Port 8099 nicht belegt ist. Bei Port-Konflikten (z.B. mit OrbStack auf Port 8000) aendere den Port im `uvicorn`-Befehl und in `frontend/vite.config.ts`.
+> **Note:** Make sure port 8099 is not in use. For port conflicts (e.g. with OrbStack on port 8000), change the port in the `uvicorn` command and in `frontend/vite.config.ts`.
 
 ### Ports
 
@@ -262,127 +261,127 @@ chmod +x start.sh
 
 ---
 
-## Bedienung
+## Usage
 
-### Schritt 1: Azure CLI Login
+### Step 1: Azure CLI Login
 
-Bevor du die Anwendung startest, melde dich mit der Azure CLI an:
+Before starting the application, sign in with Azure CLI:
 
 ```bash
 az login
 ```
 
-Der Tenant wird automatisch aus `az account show` ermittelt.
+The tenant is automatically detected from `az account show`.
 
-### Schritt 2: Microsoft Graph Login
+### Step 2: Microsoft Graph Login
 
-Oeffne http://localhost:5173 im Browser. Du siehst den Login-Screen.
+Open http://localhost:5173 in your browser. You will see the login screen.
 
-<!-- SCREENSHOT: Login-Screen mit glasigem Design und "Sign in with Microsoft" Button -->
-<!-- Dateiname: screenshot_01_login.png -->
-<!-- Beschreibung: Zeigt den initialen Login-Bildschirm mit Schloss-Icon und Sign-in Button -->
+<!-- SCREENSHOT: Login screen with glassmorphism design and "Sign in with Microsoft" button -->
+<!-- Filename: screenshot_01_login.png -->
+<!-- Description: Shows the initial login screen with lock icon and sign-in button -->
 
-Klicke auf **"Sign in with Microsoft"**. Ein Browser-Fenster oeffnet sich fuer die interaktive Anmeldung. Waehle dein Konto und akzeptiere die Berechtigungen.
+Click **"Sign in with Microsoft"**. A browser window opens for interactive authentication. Select your account and accept the permissions.
 
-### Schritt 3: Policies laden
+### Step 3: Load Policies
 
-Nach erfolgreicher Anmeldung siehst du die Hauptansicht. Klicke auf **"Load Policies"** in der oberen rechten Ecke.
+After successful login, you will see the main view. Click **"Load Policies"** in the top right corner.
 
-<!-- SCREENSHOT: Hauptansicht nach Login, vor dem Laden der Policies -->
-<!-- Dateiname: screenshot_02_main_empty.png -->
-<!-- Beschreibung: Header mit "Load Policies" Button, leerer Content-Bereich -->
+<!-- SCREENSHOT: Main view after login, before loading policies -->
+<!-- Filename: screenshot_02_main_empty.png -->
+<!-- Description: Header with "Load Policies" button, empty content area -->
 
-Die Policies werden aus allen 12 Policy-Typen parallel geladen. Ein Spinner zeigt den Ladevorgang.
+Policies are loaded from all 12 policy types in parallel. A spinner indicates the loading process.
 
-<!-- SCREENSHOT: Geladene Policy-Liste mit allen Policies -->
-<!-- Dateiname: screenshot_03_policy_list.png -->
-<!-- Beschreibung: Tabelle mit Policies, Suchfeld, Typ-Filter-Dropdown, Spalten: Checkbox, Name, Type, Platform, Description -->
+<!-- SCREENSHOT: Loaded policy list with all policies -->
+<!-- Filename: screenshot_03_policy_list.png -->
+<!-- Description: Table with policies, search field, type filter dropdown, columns: Checkbox, Name, Type, Platform, Description -->
 
-### Schritt 4: Policies auswaehlen
+### Step 4: Select Policies
 
-- **Einzeln:** Klicke auf eine Zeile in der Tabelle, um sie zu markieren/abzuwaehlen
-- **Alle:** Nutze den **"Select All"** Button
-- **Suche:** Nutze das Suchfeld, um nach Policy-Namen oder Beschreibungen zu filtern
-- **Typ-Filter:** Filtere nach Policy-Typ ueber das Dropdown (z.B. nur "Settings Catalog")
+- **Individual:** Click on a row in the table to select/deselect it
+- **All:** Use the **"Select All"** button
+- **Search:** Use the search field to filter by policy name or description
+- **Type filter:** Filter by policy type via the dropdown (e.g. only "Settings Catalog")
 
-<!-- SCREENSHOT: Policy-Liste mit einigen ausgewaehlten Policies (blaue Hervorhebung) -->
-<!-- Dateiname: screenshot_04_policies_selected.png -->
-<!-- Beschreibung: Mehrere Policies sind blau hinterlegt, Header zeigt "X policies found, Y selected" -->
+<!-- SCREENSHOT: Policy list with several selected policies (blue highlight) -->
+<!-- Filename: screenshot_04_policies_selected.png -->
+<!-- Description: Multiple policies highlighted in blue, header shows "X policies found, Y selected" -->
 
-### Schritt 5: LLM-Einstellungen anpassen (optional)
+### Step 5: Adjust LLM Settings (optional)
 
-Klicke auf das **Zahnrad-Icon** in der oberen rechten Ecke, um die Einstellungen zu oeffnen.
+Click the **gear icon** in the top right corner to open the settings.
 
-<!-- SCREENSHOT: Settings-Panel / Modal mit System Prompt, Template und Custom Instructions -->
-<!-- Dateiname: screenshot_05_settings.png -->
-<!-- Beschreibung: Modal-Dialog mit drei Textareas: System Prompt, Output Template, Custom Instructions -->
+<!-- SCREENSHOT: Settings panel / modal with system prompt, template and custom instructions -->
+<!-- Filename: screenshot_05_settings.png -->
+<!-- Description: Modal dialog with three textareas: System Prompt, Output Template, Custom Instructions -->
 
-Hier kannst du anpassen:
+You can configure:
 
-| Einstellung | Beschreibung |
+| Setting | Description |
 |---|---|
-| **System Prompt** | Definiert die Rolle und Regeln fuer das LLM |
-| **Output Template** | Format-Vorlage fuer die generierte Beschreibung |
-| **Custom Instructions** | Zusaetzliche Anweisungen (werden an den System Prompt angehaengt) |
+| **System Prompt** | Defines the role and rules for the LLM |
+| **Output Template** | Format template for the generated description |
+| **Custom Instructions** | Additional instructions appended to the system prompt |
 
-Klicke **"Save"** um die Einstellungen zu speichern. Sie werden lokal in `backend/llm_settings.json` persistiert.
+Click **"Save"** to persist the settings. They are stored locally in `backend/llm_settings.json`.
 
-### Schritt 6: Beschreibungen generieren
+### Step 6: Generate Descriptions
 
-Klicke auf **"Generate (N)"** im Header. Die Generierung startet und zeigt einen Fortschrittsbalken.
+Click **"Generate (N)"** in the header. Generation starts and displays a progress bar.
 
-<!-- SCREENSHOT: Generierungs-Fortschrittsbalken -->
-<!-- Dateiname: screenshot_06_generating.png -->
-<!-- Beschreibung: Zentrierter Fortschrittsbalken mit "Generating description for: [Policy-Name]", aktuellem Zaehler (z.B. 3/12) -->
+<!-- SCREENSHOT: Generation progress bar -->
+<!-- Filename: screenshot_06_generating.png -->
+<!-- Description: Centered progress bar with "Generating description for: [Policy-Name]", current counter (e.g. 3/12) -->
 
-Fuer jede ausgewaehlte Policy wird:
+For each selected policy:
 
-1. Die vollstaendige Policy-Konfiguration von der Graph API geladen
-2. Die Konfiguration als JSON an Azure OpenAI gesendet
-3. Eine Beschreibung basierend auf System Prompt und Template generiert
+1. The complete policy configuration is loaded from the Graph API
+2. The configuration is sent as JSON to Azure OpenAI
+3. A description is generated based on the system prompt and template
 
-### Schritt 7: Ergebnisse pruefen (Vorher/Nachher)
+### Step 7: Review Results (Before/After)
 
-Nach der Generierung siehst du die Ergebnis-Ansicht mit Vorher/Nachher-Vergleich:
+After generation, you see the results view with a before/after comparison:
 
-<!-- SCREENSHOT: Ergebnis-Ansicht mit Vorher/Nachher-Spalten -->
-<!-- Dateiname: screenshot_07_results_before_after.png -->
-<!-- Beschreibung: Pro Policy eine Karte mit: Header (Checkbox, Name, Typ-Badge), zwei Spalten: links "Original Description" (grau, read-only), rechts "Generated Description" (editierbares Textarea) -->
+<!-- SCREENSHOT: Results view with before/after columns -->
+<!-- Filename: screenshot_07_results_before_after.png -->
+<!-- Description: Per policy a card with: header (checkbox, name, type badge), two columns: left "Original Description" (gray, read-only), right "Generated Description" (editable textarea) -->
 
-**Funktionen in der Ergebnis-Ansicht:**
+**Features in the results view:**
 
-| Aktion | Beschreibung |
+| Action | Description |
 |---|---|
-| **Vorher/Nachher** | Links die aktuelle Beschreibung aus Intune, rechts die generierte |
-| **Bearbeiten** | Die generierte Beschreibung kann direkt im Textarea bearbeitet werden |
-| **Auswaehlen** | Per Klick auf die Karte wird die Policy fuer das Intune-Update markiert (blauer Rahmen) |
-| **Select All / Deselect All** | Alle Policies auf einmal auswaehlen/abwaehlen |
-| **Export** | Exportiert alle Beschreibungen als Markdown-Datei |
+| **Before/After** | Left shows the current Intune description, right shows the generated one |
+| **Edit** | The generated description can be edited directly in the textarea |
+| **Select** | Click on a card to mark the policy for Intune update (blue border) |
+| **Select All / Deselect All** | Select or deselect all policies at once |
+| **Export** | Export all descriptions as a Markdown file |
 
-### Schritt 8: Beschreibungen in Intune schreiben
+### Step 8: Write Descriptions to Intune
 
-1. Waehle die Policies aus, die du in Intune aktualisieren moechtest (Klick auf die Karte oder "Select All")
-2. Klicke auf **"Update in Intune (N)"**
-3. Erfolgreich aktualisierte Policies erhalten ein gruenes **"Updated in Intune"** Badge
+1. Select the policies you want to update in Intune (click on the card or "Select All")
+2. Click **"Sync to Intune (N)"**
+3. Successfully updated policies receive a green **"Updated in Intune"** badge
 
-<!-- SCREENSHOT: Ergebnis-Ansicht mit einigen "Updated in Intune" Badges -->
-<!-- Dateiname: screenshot_08_updated_policies.png -->
-<!-- Beschreibung: Einige Policy-Karten haben gruenen Rahmen und ein gruenes Badge "Updated in Intune" mit Haekchen. Der Update-Button zeigt die verbleibende Anzahl. -->
+<!-- SCREENSHOT: Results view with some "Updated in Intune" badges -->
+<!-- Filename: screenshot_08_updated_policies.png -->
+<!-- Description: Some policy cards have green border and a green "Updated in Intune" badge with checkmark. The update button shows the remaining count. -->
 
-> **Hinweis:** Nicht alle Policy-Typen unterstuetzen das Zurueckschreiben (siehe Tabelle oben). Policies ohne Schreibunterstuetzung erhalten eine Fehlermeldung.
+> **Note:** Not all policy types support write-back (see table above). Policies without write support will show an error message.
 
 ---
 
-## API-Referenz
+## API Reference
 
-Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive Dokumentation unter `http://localhost:8099/docs`.
+All endpoints are available at `http://localhost:8099/api/`. Interactive documentation at `http://localhost:8099/docs`.
 
-### Authentifizierung
+### Authentication
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/auth/status` | Auth-Status pruefen (nur lokaler Cache, kein Netzwerk) |
-| `POST` | `/api/auth/login` | Interaktiven Browser-Login starten |
+| `GET` | `/api/auth/status` | Check auth status (local cache only, no network) |
+| `POST` | `/api/auth/login` | Start interactive browser login |
 
 **GET /api/auth/status - Response:**
 
@@ -396,11 +395,11 @@ Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive D
 
 ### Policies
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/policies` | Alle Policies laden (12 Typen parallel) |
-| `GET` | `/api/policies/{type}/{id}` | Policy-Details mit typ-spezifischen Settings |
-| `GET` | `/api/policy-types` | Verfuegbare Policy-Typen und Labels |
+| `GET` | `/api/policies` | Load all policies (12 types in parallel) |
+| `GET` | `/api/policies/{type}/{id}` | Policy details with type-specific settings |
+| `GET` | `/api/policy-types` | Available policy types and labels |
 
 **GET /api/policies - Response:**
 
@@ -418,11 +417,11 @@ Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive D
 }
 ```
 
-### Generierung
+### Generation
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/generate-single` | Beschreibung fuer eine einzelne Policy generieren |
+| `POST` | `/api/generate-single` | Generate description for a single policy |
 
 **POST /api/generate-single - Request:**
 
@@ -447,11 +446,11 @@ Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive D
 }
 ```
 
-### Beschreibungen aktualisieren
+### Update Descriptions
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/update-descriptions` | Beschreibungen in Intune aktualisieren (Bulk) |
+| `POST` | `/api/update-descriptions` | Update policy descriptions in Intune (bulk) |
 
 **POST /api/update-descriptions - Request:**
 
@@ -461,7 +460,7 @@ Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive D
     {
       "policy_id": "abc-123",
       "policy_type": "deviceConfiguration",
-      "description": "Neue Beschreibung..."
+      "description": "New description..."
     }
   ]
 }
@@ -480,175 +479,175 @@ Alle Endpoints sind unter `http://localhost:8099/api/` erreichbar. Interaktive D
 }
 ```
 
-### LLM-Einstellungen
+### LLM Settings
 
-| Methode | Endpoint | Beschreibung |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/settings` | Aktuelle LLM-Einstellungen laden |
-| `PUT` | `/api/settings` | LLM-Einstellungen speichern |
+| `GET` | `/api/settings` | Load current LLM settings |
+| `PUT` | `/api/settings` | Save LLM settings |
 
 ---
 
-## Projektstruktur
+## Project Structure
 
 ```
 IntunePolicy/
 |
 |-- backend/
-|   |-- main.py                 # FastAPI App, CORS, alle API-Endpoints
-|   |-- auth.py                 # MSAL Authentifizierung, Token-Cache
-|   |-- graph_client.py         # Async HTTP Client fuer Microsoft Graph API
-|   |-- policy_fetcher.py       # Policy-Typen, Laden, Details, Update
-|   |-- llm_service.py          # Azure OpenAI Integration
-|   |-- models.py               # Pydantic Models (Policy, GenerationResult, etc.)
-|   |-- config.py               # Environment-basierte Settings
-|   |-- requirements.txt        # Python Abhaengigkeiten
-|   |-- llm_settings.json       # Persistierte LLM-Einstellungen (generiert)
-|   |-- .token_cache.json       # MSAL Token Cache (generiert, nicht committen!)
-|   +-- venv/                   # Python Virtual Environment
+|   |-- main.py                 # FastAPI app, CORS, all API endpoints
+|   |-- auth.py                 # MSAL authentication, token cache
+|   |-- graph_client.py         # Async HTTP client for Microsoft Graph API
+|   |-- policy_fetcher.py       # Policy types, fetching, details, update
+|   |-- llm_service.py          # Azure OpenAI integration
+|   |-- models.py               # Pydantic models (Policy, GenerationResult, etc.)
+|   |-- config.py               # Environment-based settings
+|   |-- requirements.txt        # Python dependencies
+|   |-- llm_settings.json       # Persisted LLM settings (generated at runtime)
+|   |-- .token_cache.json       # MSAL token cache (generated, do not commit!)
+|   +-- venv/                   # Python virtual environment
 |
 |-- frontend/
-|   |-- index.html              # HTML Entry Point
-|   |-- package.json            # Node.js Abhaengigkeiten
-|   |-- vite.config.ts          # Vite Config mit API Proxy
-|   |-- tailwind.config.js      # Tailwind CSS Konfiguration
-|   |-- tsconfig.json           # TypeScript Konfiguration
+|   |-- index.html              # HTML entry point
+|   |-- package.json            # Node.js dependencies
+|   |-- vite.config.ts          # Vite config with API proxy
+|   |-- tailwind.config.js      # Tailwind CSS configuration
+|   |-- tsconfig.json           # TypeScript configuration
 |   +-- src/
-|       |-- main.tsx            # React Entry Point
-|       |-- App.tsx             # Hauptkomponente (Routing, State)
-|       |-- index.css           # Globale Styles, Glassmorphism
+|       |-- main.tsx            # React entry point
+|       |-- App.tsx             # Main component (routing, state)
+|       |-- index.css           # Global styles, glassmorphism
 |       |-- api/
-|       |   +-- client.ts       # API Client (fetch-basiert)
+|       |   +-- client.ts       # API client (fetch-based)
 |       |-- types/
-|       |   +-- index.ts        # TypeScript Interfaces, Labels
+|       |   +-- index.ts        # TypeScript interfaces, labels
 |       +-- components/
-|           |-- PolicyList.tsx       # Policy-Tabelle mit Filter & Suche
-|           |-- PolicyDetail.tsx     # Policy-Detail Ansicht
-|           |-- SettingsPanel.tsx    # LLM-Einstellungen Modal
-|           |-- GenerationProgress.tsx # Fortschrittsanzeige
-|           +-- DescriptionResult.tsx  # Vorher/Nachher + Update
+|           |-- PolicyList.tsx       # Policy table with filter & search
+|           |-- PolicyDetail.tsx     # Policy detail view
+|           |-- SettingsPanel.tsx    # LLM settings modal
+|           |-- GenerationProgress.tsx # Progress indicator
+|           +-- DescriptionResult.tsx  # Before/after + update
 |
-|-- .env.example                # Vorlage fuer Azure OpenAI Credentials
-|-- .gitignore                  # Git Ignore Regeln
-+-- start.sh                    # Start-Script fuer beide Server
+|-- .env.example                # Template for Azure OpenAI credentials
+|-- .gitignore                  # Git ignore rules
++-- start.sh                    # Start script for both servers
 ```
 
-### Datei-Details
+### File Details
 
 #### `backend/auth.py`
-- Verwendet die Microsoft Graph PowerShell App Registration (vorregistriert)
-- Token wird im lokalen File-Cache gespeichert (`.token_cache.json`)
-- `check_auth()` prueft nur den lokalen Cache (schnell, kein Netzwerk)
-- `get_graph_token()` versucht Silent-Login, dann interaktiver Browser-Login
-- Tenant-ID wird ueber `az account show` ermittelt und gecacht
+- Uses the Microsoft Graph PowerShell app registration (pre-consented)
+- Token is stored in a local file cache (`.token_cache.json`)
+- `check_auth()` only checks the local cache (fast, no network calls)
+- `get_graph_token()` tries silent login first, then interactive browser login
+- Tenant ID is detected via `az account show` and cached
 
 #### `backend/graph_client.py`
-- Singleton `GraphClient` mit Connection-Pooling via `httpx.AsyncClient`
-- Automatische Token-Erneuerung bei 401-Responses
-- `get_all()` folgt automatisch `@odata.nextLink` fuer Pagination
-- `patch()` fuer Beschreibungs-Updates, behandelt 204 No Content
+- Singleton `GraphClient` with connection pooling via `httpx.AsyncClient`
+- Automatic token renewal on 401 responses
+- `get_all()` automatically follows `@odata.nextLink` for pagination
+- `patch()` for description updates, handles 204 No Content
 
 #### `backend/policy_fetcher.py`
-- 12 Policy-Typen in `POLICY_ENDPOINTS` definiert
-- `fetch_all_policies()` laedt alle Typen parallel via `asyncio.gather()`
-- `fetch_policy_details()` laedt typ-spezifische Zusatzdaten:
+- 12 policy types defined in `POLICY_ENDPOINTS`
+- `fetch_all_policies()` loads all types in parallel via `asyncio.gather()`
+- `fetch_policy_details()` loads type-specific additional data:
   - Settings Catalog: `/{id}/settings`
-  - Endpoint Security: `/{id}/categories` mit jeweiligen Settings
+  - Endpoint Security: `/{id}/categories` with their settings
   - Group Policy: `/{id}/definitionValues`
-- `update_policy_description()` handhabt PATCH inkl. `@odata.type` fuer Device Configurations
-- `PATCHABLE_TYPES` definiert, welche Typen das Zurueckschreiben unterstuetzen
+- `update_policy_description()` handles PATCH including `@odata.type` for device configurations
+- `PATCHABLE_TYPES` defines which types support write-back
 
 #### `backend/llm_service.py`
-- Erstellt pro Request einen neuen `AsyncAzureOpenAI` Client
-- `max_completion_tokens=1000` (nicht `max_tokens`, das wird von neueren Modellen nicht unterstuetzt)
-- Keine `temperature`-Konfiguration (gpt-5-mini unterstuetzt nur den Default-Wert)
-- Custom Instructions werden an den System Prompt angehaengt
+- Creates a new `AsyncAzureOpenAI` client per request
+- Uses `max_completion_tokens=1000` (not `max_tokens`, which is unsupported by newer models)
+- No `temperature` configuration (gpt-5-mini only supports the default value)
+- Custom instructions are appended to the system prompt
 
 #### `frontend/src/App.tsx`
-- Drei Views: `policies` | `generating` | `results`
-- Generierung erfolgt sequentiell (eine Policy nach der anderen) fuer Fortschritts-Tracking
-- Original-Beschreibung wird aus der geladenen Policy-Liste an die Ergebnisse angehaengt
+- Three views: `policies` | `generating` | `results`
+- Generation runs sequentially (one policy at a time) for progress tracking
+- Original description is attached to results from the loaded policy list
 
 #### `frontend/src/components/DescriptionResult.tsx`
-- Zwei-Spalten-Layout: Original (read-only) vs. Generiert (editierbar)
-- Per-Policy Auswahl fuer selektives Intune-Update
-- Tracking von erfolgreich aktualisierten Policies ("Updated in Intune" Badge)
-- Markdown-Export aller Beschreibungen
+- Two-column layout: original (read-only) vs. generated (editable)
+- Per-policy selection for selective Intune update
+- Tracks successfully updated policies ("Updated in Intune" badge)
+- Markdown export of all descriptions
 
 ---
 
-## Fehlerbehebung
+## Troubleshooting
 
-### "Not Authenticated" obwohl ich eingeloggt bin
+### "Not Authenticated" even though I'm logged in
 
-Der Token-Cache ist ggf. abgelaufen. Klicke erneut auf "Sign in with Microsoft" - es oeffnet sich der Browser fuer die Anmeldung.
+The token cache may have expired. Click "Sign in with Microsoft" again - a browser window will open for authentication.
 
-### 403 Forbidden bei Policy-Abrufen
+### 403 Forbidden when fetching policies
 
-Der angemeldete Benutzer hat nicht die erforderlichen Intune-Berechtigungen. Stelle sicher, dass der Benutzer mindestens "Intune Administrator" oder entsprechende Rollen hat.
+The signed-in user does not have the required Intune permissions. Make sure the user has at least the "Intune Administrator" role or equivalent permissions.
 
-### Port-Konflikte
+### Port conflicts
 
-Falls Port 8099 oder 5173 belegt sind:
+If port 8099 or 5173 is already in use:
 
-**Backend-Port aendern:**
+**Change backend port:**
 ```bash
-uvicorn main:app --reload --port NEUER_PORT
+uvicorn main:app --reload --port NEW_PORT
 ```
 
-Zusaetzlich in `frontend/vite.config.ts` den Proxy anpassen:
+Also update the proxy in `frontend/vite.config.ts`:
 ```typescript
 proxy: {
   '/api': {
-    target: 'http://localhost:NEUER_PORT',
+    target: 'http://localhost:NEW_PORT',
   },
 },
 ```
 
 ### "max_tokens is not supported"
 
-Dieses Problem wurde bereits geloest. Das Tool verwendet `max_completion_tokens` statt `max_tokens`. Falls der Fehler trotzdem auftritt, pruefe ob `llm_service.py` aktuell ist.
+This issue has already been resolved. The tool uses `max_completion_tokens` instead of `max_tokens`. If the error still occurs, check that `llm_service.py` is up to date.
 
-### PATCH-Fehler bei Device Configurations
+### PATCH errors for Device Configurations
 
-Device Configuration Policies benoetigen `@odata.type` im PATCH-Body. Das Tool liest diesen Wert automatisch aus der bestehenden Policy. Falls der Fehler weiterhin auftritt, ist die Policy moeglicherweise schreibgeschuetzt.
+Device Configuration policies require `@odata.type` in the PATCH body. The tool automatically reads this value from the existing policy. If the error persists, the policy may be read-only.
 
-### Python 3.14 Build-Fehler
+### Python 3.14 build errors
 
-`pydantic-core` laesst sich unter Python 3.14 nicht kompilieren. Verwende Python 3.11 - 3.13:
+`pydantic-core` cannot be compiled under Python 3.14. Use Python 3.11 - 3.13:
 ```bash
 python3.13 -m venv venv
 ```
 
-### Seite bleibt weiss / React-Fehler
+### White screen / React errors
 
-Oeffne die Browser-Konsole (F12 > Console) und pruefe auf JavaScript-Fehler. Haeufige Ursache: Backend ist nicht erreichbar. Stelle sicher, dass beide Server laufen.
-
----
-
-## Sicherheitshinweise
-
-- **Azure OpenAI Credentials** werden in `backend/config.py` als Defaults gespeichert. Fuer Produktionsumgebungen ausschliesslich ueber `.env`-Datei oder Umgebungsvariablen konfigurieren.
-- **Token-Cache** (`.token_cache.json`) enthaelt Refresh-Tokens und darf nicht in Git eingecheckt werden.
-- Die Anwendung verwendet die **Graph API Beta** - diese kann sich ohne Vorankuendigung aendern.
-- **ReadWrite-Berechtigungen**: Die Anwendung fordert `DeviceManagementConfiguration.ReadWrite.All` an, um Beschreibungen zurueckschreiben zu koennen. Dieses Recht erlaubt theoretisch auch andere Aenderungen - die Anwendung nutzt es jedoch ausschliesslich fuer Description-Updates via PATCH.
-- Die Anwendung laeuft **lokal** und sendet Daten nur an Microsoft Graph und Azure OpenAI. Es werden keine Daten an Dritte uebermittelt.
+Open the browser console (F12 > Console) and check for JavaScript errors. Common cause: the backend is not reachable. Make sure both servers are running.
 
 ---
 
-## Screenshots - Uebersicht
+## Security Notes
 
-Fuer eine vollstaendige Dokumentation werden folgende Screenshots benoetigt:
+- **Azure OpenAI credentials** must be configured exclusively via `.env` file or environment variables. Never hardcode them in source files.
+- **Token cache** (`.token_cache.json`) contains refresh tokens and must not be committed to Git.
+- The application uses the **Graph API Beta** - this can change without notice.
+- **ReadWrite permissions**: The application requests `DeviceManagementConfiguration.ReadWrite.All` to write descriptions back. This permission theoretically allows other changes - the application exclusively uses it for description updates via PATCH.
+- The application runs **locally** and only sends data to Microsoft Graph and Azure OpenAI. No data is transmitted to third parties.
 
-| Nr. | Dateiname | Beschreibung | Wo aufnehmen |
-|-----|-----------|--------------|--------------|
-| 1 | `screenshot_01_login.png` | Login-Screen mit "Sign in with Microsoft" Button | http://localhost:5173 (vor Login) |
-| 2 | `screenshot_02_main_empty.png` | Hauptansicht nach Login, vor Policy-Laden | Nach erfolgreichem Login |
-| 3 | `screenshot_03_policy_list.png` | Geladene Policy-Liste mit Suchfeld und Filter | Nach Klick auf "Load Policies" |
-| 4 | `screenshot_04_policies_selected.png` | Policy-Liste mit ausgewaehlten Policies | Einige Policies anklicken |
-| 5 | `screenshot_05_settings.png` | Settings-Modal mit System Prompt, Template, Custom Instructions | Klick auf Zahnrad-Icon |
-| 6 | `screenshot_06_generating.png` | Fortschrittsbalken waehrend Generierung | Waehrend "Generate" laeuft |
-| 7 | `screenshot_07_results_before_after.png` | Ergebnis-Ansicht mit Vorher/Nachher-Spalten | Nach abgeschlossener Generierung |
-| 8 | `screenshot_08_updated_policies.png` | Policies mit "Updated in Intune" Badge | Nach Klick auf "Update in Intune" |
+---
 
-> Erstelle die Screenshots in der Reihenfolge 1-8 waehrend eines Durchlaufs und speichere sie im Projektroot unter `docs/screenshots/`.
+## Screenshots
+
+For complete documentation, the following screenshots are needed. See `docs/screenshots/SCREENSHOTS.md` for details on how to capture them.
+
+| # | Filename | Description |
+|---|----------|-------------|
+| 1 | `screenshot_01_login.png` | Login screen with "Sign in with Microsoft" button |
+| 2 | `screenshot_02_main_empty.png` | Main view after login, before loading policies |
+| 3 | `screenshot_03_policy_list.png` | Loaded policy list with search field and filter |
+| 4 | `screenshot_04_policies_selected.png` | Policy list with selected policies |
+| 5 | `screenshot_05_settings.png` | Settings modal with system prompt, template, custom instructions |
+| 6 | `screenshot_06_generating.png` | Progress bar during generation |
+| 7 | `screenshot_07_results_before_after.png` | Results view with before/after columns |
+| 8 | `screenshot_08_updated_policies.png` | Policies with "Updated in Intune" badge |
+
+> Place screenshots in `docs/screenshots/` and replace the HTML comment placeholders in this README with `![Description](docs/screenshots/filename.png)`.
