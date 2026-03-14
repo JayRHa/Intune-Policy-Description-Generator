@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 import msal
@@ -30,34 +29,27 @@ def _save_cache():
         TOKEN_CACHE_FILE.write_text(_token_cache.serialize())
 
 
-def _get_tenant() -> str:
-    global _cached_tenant
-    if _cached_tenant:
-        return _cached_tenant
-    try:
-        result = subprocess.run(
-            ["az", "account", "show", "--query", "tenantId", "-o", "tsv"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            _cached_tenant = result.stdout.strip()
-            return _cached_tenant
-    except Exception:
-        pass
-    return "common"
-
-
 def _get_app() -> msal.PublicClientApplication:
     global _app
     if _app is None:
         _load_cache()
-        tenant = _get_tenant()
         _app = msal.PublicClientApplication(
             CLIENT_ID,
-            authority=f"https://login.microsoftonline.com/{tenant}",
+            authority="https://login.microsoftonline.com/organizations",
             token_cache=_token_cache,
         )
     return _app
+
+
+def logout():
+    """Clear all cached tokens and reset the MSAL app so a new account can be chosen."""
+    global _app, _cached_tenant
+    _app = None
+    _cached_tenant = None
+    _token_cache._cache = {}
+    if TOKEN_CACHE_FILE.exists():
+        TOKEN_CACHE_FILE.unlink()
+    _token_cache.has_state_changed = False
 
 
 def get_graph_token() -> str:
@@ -91,11 +83,12 @@ def check_auth() -> dict:
         app = _get_app()
         accounts = app.get_accounts()
         if accounts:
-            # Just check if we have a cached account, don't try to acquire token
+            account = accounts[0]
+            tenant = account.get("realm", account.get("home_account_id", "").split(".")[1] if "." in account.get("home_account_id", "") else "Unknown")
             return {
                 "authenticated": True,
-                "tenant": _get_tenant(),
-                "user": accounts[0].get("username", "Unknown"),
+                "tenant": tenant,
+                "user": account.get("username", "Unknown"),
             }
 
         return {

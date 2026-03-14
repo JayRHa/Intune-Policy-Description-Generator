@@ -2,7 +2,7 @@
 
 A local tool that fetches all Microsoft Intune policies from a tenant, automatically generates meaningful descriptions using Azure OpenAI, and analyzes policy conflicts by detecting overlapping settings across policies.
 
-![Login Screen](docs/screenshots/screenshot_01_login.png)
+![Login Screen](docs/screenshots/screenshot_08_updated_policies.png)
 
 ---
 
