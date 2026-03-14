@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import asyncio
-from auth import check_auth, get_graph_token
+from auth import check_auth, get_graph_token, logout
 from graph_client import graph_client
 from llm_service import (
     generate_description,
@@ -14,6 +14,7 @@ from llm_service import (
 )
 from models import GenerateRequest, GenerationResult, LLMSettings
 from policy_fetcher import fetch_all_policies, fetch_policy_details, update_policy_description, POLICY_ENDPOINTS
+from conflict_analyzer import analyze_conflicts
 
 
 @asynccontextmanager
@@ -44,6 +45,16 @@ async def auth_login():
         token = await asyncio.to_thread(get_graph_token)
         await graph_client.close()
         return {"status": "authenticated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/auth/logout")
+async def auth_logout():
+    try:
+        logout()
+        await graph_client.close()
+        return {"status": "logged_out"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -149,6 +160,16 @@ async def get_settings():
 async def update_settings(llm_settings: LLMSettings):
     save_llm_settings(llm_settings)
     return {"status": "saved"}
+
+
+@app.get("/api/analyze-conflicts")
+async def analyze_conflicts_endpoint():
+    """Analyze all policies and find overlapping/duplicate settings."""
+    try:
+        conflicts = await analyze_conflicts()
+        return {"conflicts": conflicts, "total": len(conflicts)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/policy-types")

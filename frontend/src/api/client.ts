@@ -22,6 +22,10 @@ export async function triggerLogin(): Promise<{ status: string }> {
   return fetchJson('/auth/login', { method: 'POST' });
 }
 
+export async function triggerLogout(): Promise<{ status: string }> {
+  return fetchJson('/auth/logout', { method: 'POST' });
+}
+
 export async function getPolicies(): Promise<Policy[]> {
   const data = await fetchJson<{ policies: Policy[] }>('/policies');
   return data.policies;
@@ -55,6 +59,23 @@ export async function generateSingleDescription(
       custom_instructions: customInstructions || undefined,
     }),
   });
+}
+
+export interface ConflictEntry {
+  setting_key: string;
+  setting_label: string;
+  policies: {
+    policy_id: string;
+    policy_name: string;
+    policy_type: string;
+    platform: string | null;
+    value: unknown;
+  }[];
+  has_different_values: boolean;
+}
+
+export async function analyzeConflicts(): Promise<{ conflicts: ConflictEntry[]; total: number }> {
+  return fetchJson('/analyze-conflicts');
 }
 
 export async function updateDescriptionsInIntune(
