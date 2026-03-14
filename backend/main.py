@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     await graph_client.close()
 
 
-app = FastAPI(title="Intune Policy Description Generator", lifespan=lifespan)
+app = FastAPI(title="Intune PolicyManagement", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

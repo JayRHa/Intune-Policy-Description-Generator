@@ -220,7 +220,7 @@ export default function App() {
         <header className="sticky top-0 z-50 bg-white/40 backdrop-blur-2xl border-b border-white/20 shadow-sm">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Intune Policy Description Generator</h1>
+              <h1 className="text-xl font-bold text-gray-900">Intune PolicyManagement</h1>
               <p className="text-sm text-gray-500">
                 Signed in as {auth.user} | Tenant: {auth.tenant?.slice(0, 8)}...
               </p>
@@ -254,7 +254,7 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/40 backdrop-blur-2xl border-b border-white/20 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Intune Policy Description Generator</h1>
+            <h1 className="text-xl font-bold text-gray-900">Intune PolicyManagement</h1>
             <p className="text-sm text-gray-500">
               Signed in as {auth.user} | Tenant: {auth.tenant?.slice(0, 8)}...
             </p>
