@@ -1,6 +1,8 @@
-# Intune Policy Description Generator
+# Intune PolicyManagement
 
-A local tool that fetches all Microsoft Intune policies from a tenant and automatically generates meaningful descriptions using Azure OpenAI. Generated descriptions can be written back to Intune directly.
+A local tool that fetches all Microsoft Intune policies from a tenant, automatically generates meaningful descriptions using Azure OpenAI, and analyzes policy conflicts by detecting overlapping settings across policies.
+
+![Login Screen](docs/screenshots/screenshot_01_login.png)
 
 ---
 
@@ -23,16 +25,14 @@ A local tool that fetches all Microsoft Intune policies from a tenant and automa
 
 ## Overview
 
-Many Intune policies have no or inadequate descriptions. This tool solves that problem:
+Many Intune policies have no or inadequate descriptions, and settings are often configured in multiple policies without visibility into overlaps. This tool solves both problems:
 
 1. **Fetch** - Loads all policies from the Intune tenant via Microsoft Graph API (Beta)
 2. **Analyze** - Sends the complete policy configuration (JSON) to Azure OpenAI
 3. **Generate** - Creates structured, human-readable descriptions per policy
 4. **Compare** - Shows a before/after view (original vs. generated description)
 5. **Write Back** - Pushes selected descriptions directly back to Intune
-
-<!-- SCREENSHOT: Login screen with "Sign in with Microsoft" button -->
-<!-- Filename: screenshot_01_login.png -->
+6. **Conflict Analysis** - Detects settings configured in multiple policies and highlights conflicts
 
 ---
 
@@ -65,6 +65,7 @@ Many Intune policies have no or inadequate descriptions. This tool solves that p
 - Communicates with backend via `/api/*` proxy
 - Components:
   - `PolicyList` - Table of all policies with search, filter, multi-select
+  - `ConflictAnalysis` - Detects and displays overlapping settings across policies
   - `SettingsPanel` - LLM settings (system prompt, template, custom instructions)
   - `GenerationProgress` - Progress bar during generation
   - `DescriptionResult` - Before/after comparison with Intune update functionality
@@ -75,6 +76,7 @@ Many Intune policies have no or inadequate descriptions. This tool solves that p
 - MSAL-based authentication (interactive browser login)
 - Microsoft Graph API client with automatic token renewal and pagination
 - Azure OpenAI integration for description generation
+- Policy conflict analysis engine
 - LLM settings persisted locally in `llm_settings.json`
 
 ---
@@ -139,8 +141,8 @@ The application uses the Microsoft Graph PowerShell app registration (Client ID:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/JayRHa/Intune-Policy-Description-Generator.git
-cd Intune-Policy-Description-Generator
+git clone https://github.com/JayRHa/Intune-PolicyManagement.git
+cd Intune-PolicyManagement
 ```
 
 ### 2. Set up the backend
@@ -277,9 +279,7 @@ The tenant is automatically detected from `az account show`.
 
 Open http://localhost:5173 in your browser. You will see the login screen.
 
-<!-- SCREENSHOT: Login screen with glassmorphism design and "Sign in with Microsoft" button -->
-<!-- Filename: screenshot_01_login.png -->
-<!-- Description: Shows the initial login screen with lock icon and sign-in button -->
+![Login Screen](docs/screenshots/screenshot_01_login.png)
 
 Click **"Sign in with Microsoft"**. A browser window opens for interactive authentication. Select your account and accept the permissions.
 
@@ -287,15 +287,11 @@ Click **"Sign in with Microsoft"**. A browser window opens for interactive authe
 
 After successful login, you will see the main view. Click **"Load Policies"** in the top right corner.
 
-<!-- SCREENSHOT: Main view after login, before loading policies -->
-<!-- Filename: screenshot_02_main_empty.png -->
-<!-- Description: Header with "Load Policies" button, empty content area -->
+![Main View - Empty](docs/screenshots/screenshot_02_main_empty.png)
 
 Policies are loaded from all 12 policy types in parallel. A spinner indicates the loading process.
 
-<!-- SCREENSHOT: Loaded policy list with all policies -->
-<!-- Filename: screenshot_03_policy_list.png -->
-<!-- Description: Table with policies, search field, type filter dropdown, columns: Checkbox, Name, Type, Platform, Description -->
+![Policy List](docs/screenshots/screenshot_03_policy_list.png)
 
 ### Step 4: Select Policies
 
@@ -304,17 +300,13 @@ Policies are loaded from all 12 policy types in parallel. A spinner indicates th
 - **Search:** Use the search field to filter by policy name or description
 - **Type filter:** Filter by policy type via the dropdown (e.g. only "Settings Catalog")
 
-<!-- SCREENSHOT: Policy list with several selected policies (blue highlight) -->
-<!-- Filename: screenshot_04_policies_selected.png -->
-<!-- Description: Multiple policies highlighted in blue, header shows "X policies found, Y selected" -->
+![Policies Selected](docs/screenshots/screenshot_04_policies_selected.png)
 
 ### Step 5: Adjust LLM Settings (optional)
 
 Click the **gear icon** in the top right corner to open the settings.
 
-<!-- SCREENSHOT: Settings panel / modal with system prompt, template and custom instructions -->
-<!-- Filename: screenshot_05_settings.png -->
-<!-- Description: Modal dialog with three textareas: System Prompt, Output Template, Custom Instructions -->
+![Settings Panel](docs/screenshots/screenshot_05_settings.png)
 
 You can configure:
 
@@ -330,9 +322,7 @@ Click **"Save"** to persist the settings. They are stored locally in `backend/ll
 
 Click **"Generate (N)"** in the header. Generation starts and displays a progress bar.
 
-<!-- SCREENSHOT: Generation progress bar -->
-<!-- Filename: screenshot_06_generating.png -->
-<!-- Description: Centered progress bar with "Generating description for: [Policy-Name]", current counter (e.g. 3/12) -->
+![Generation Progress](docs/screenshots/screenshot_06_generating.png)
 
 For each selected policy:
 
@@ -344,9 +334,7 @@ For each selected policy:
 
 After generation, you see the results view with a before/after comparison:
 
-<!-- SCREENSHOT: Results view with before/after columns -->
-<!-- Filename: screenshot_07_results_before_after.png -->
-<!-- Description: Per policy a card with: header (checkbox, name, type badge), two columns: left "Original Description" (gray, read-only), right "Generated Description" (editable textarea) -->
+![Results - Before/After](docs/screenshots/screenshot_07_results_before_after.png)
 
 **Features in the results view:**
 
@@ -364,11 +352,30 @@ After generation, you see the results view with a before/after comparison:
 2. Click **"Sync to Intune (N)"**
 3. Successfully updated policies receive a green **"Updated in Intune"** badge
 
-<!-- SCREENSHOT: Results view with some "Updated in Intune" badges -->
-<!-- Filename: screenshot_08_updated_policies.png -->
-<!-- Description: Some policy cards have green border and a green "Updated in Intune" badge with checkmark. The update button shows the remaining count. -->
+![Updated Policies](docs/screenshots/screenshot_08_updated_policies.png)
 
 > **Note:** Not all policy types support write-back (see table above). Policies without write support will show an error message.
+
+### Step 9: Conflict Analysis
+
+Switch to the **"Conflict Analysis"** tab using the pill-style tab navigation in the header. This feature scans all policies and identifies settings that are configured in multiple policies.
+
+Click **"Start Analysis"** to begin. The analyzer fetches detailed settings from every policy and compares them.
+
+**Results show two categories:**
+
+| Category | Description |
+|---|---|
+| **Conflicts** (red) | Same setting configured in multiple policies with **different values** |
+| **Duplicates** (amber) | Same setting configured in multiple policies with **identical values** |
+
+**Features:**
+
+- **Stats cards** showing total shared settings, conflicts, duplicates, and affected policies
+- **Filter chips** to show all overlaps, only conflicts, or only duplicates
+- **Search** across setting names and policy names
+- **Expandable rows** showing each affected policy with its configured value
+- **Value comparison** with visual highlighting of differing values
 
 ---
 
@@ -479,6 +486,43 @@ All endpoints are available at `http://localhost:8099/api/`. Interactive documen
 }
 ```
 
+### Conflict Analysis
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/analyze-conflicts` | Analyze all policies for overlapping settings |
+
+**GET /api/analyze-conflicts - Response:**
+
+```json
+{
+  "conflicts": [
+    {
+      "setting_key": "#microsoft.graph.windows10GeneralConfiguration:passwordRequired",
+      "setting_label": "passwordRequired",
+      "has_different_values": true,
+      "policies": [
+        {
+          "policy_id": "abc-123",
+          "policy_name": "Windows - Security Baseline",
+          "policy_type": "deviceConfiguration",
+          "platform": "Windows",
+          "value": true
+        },
+        {
+          "policy_id": "def-456",
+          "policy_name": "Windows - Custom Config",
+          "policy_type": "deviceConfiguration",
+          "platform": "Windows",
+          "value": false
+        }
+      ]
+    }
+  ],
+  "total": 42
+}
+```
+
 ### LLM Settings
 
 | Method | Endpoint | Description |
@@ -491,13 +535,14 @@ All endpoints are available at `http://localhost:8099/api/`. Interactive documen
 ## Project Structure
 
 ```
-IntunePolicy/
+Intune-PolicyManagement/
 |
 |-- backend/
 |   |-- main.py                 # FastAPI app, CORS, all API endpoints
 |   |-- auth.py                 # MSAL authentication, token cache
 |   |-- graph_client.py         # Async HTTP client for Microsoft Graph API
 |   |-- policy_fetcher.py       # Policy types, fetching, details, update
+|   |-- conflict_analyzer.py    # Policy conflict detection engine
 |   |-- llm_service.py          # Azure OpenAI integration
 |   |-- models.py               # Pydantic models (Policy, GenerationResult, etc.)
 |   |-- config.py               # Environment-based settings
@@ -514,18 +559,22 @@ IntunePolicy/
 |   |-- tsconfig.json           # TypeScript configuration
 |   +-- src/
 |       |-- main.tsx            # React entry point
-|       |-- App.tsx             # Main component (routing, state)
+|       |-- App.tsx             # Main component (routing, state, tabs)
 |       |-- index.css           # Global styles, glassmorphism
 |       |-- api/
 |       |   +-- client.ts       # API client (fetch-based)
 |       |-- types/
 |       |   +-- index.ts        # TypeScript interfaces, labels
 |       +-- components/
-|           |-- PolicyList.tsx       # Policy table with filter & search
-|           |-- PolicyDetail.tsx     # Policy detail view
-|           |-- SettingsPanel.tsx    # LLM settings modal
+|           |-- PolicyList.tsx         # Policy table with filter & search
+|           |-- PolicyDetail.tsx       # Policy detail view (JSON)
+|           |-- ConflictAnalysis.tsx   # Conflict detection & visualization
+|           |-- SettingsPanel.tsx      # LLM settings modal
 |           |-- GenerationProgress.tsx # Progress indicator
-|           +-- DescriptionResult.tsx  # Before/after + update
+|           +-- DescriptionResult.tsx  # Before/after + Intune update
+|
+|-- docs/
+|   +-- screenshots/            # Application screenshots
 |
 |-- .env.example                # Template for Azure OpenAI credentials
 |-- .gitignore                  # Git ignore rules
@@ -557,6 +606,12 @@ IntunePolicy/
 - `update_policy_description()` handles PATCH including `@odata.type` for device configurations
 - `PATCHABLE_TYPES` defines which types support write-back
 
+#### `backend/conflict_analyzer.py`
+- Extracts individual settings from each policy type (Settings Catalog, Device Configuration, Compliance, Endpoint Security, Group Policy)
+- Groups settings by key to find overlaps across policies
+- Detects conflicts (different values) vs. duplicates (identical values)
+- Uses semaphore-controlled concurrency to avoid Graph API rate limits
+
 #### `backend/llm_service.py`
 - Creates a new `AsyncAzureOpenAI` client per request
 - Uses `max_completion_tokens=1000` (not `max_tokens`, which is unsupported by newer models)
@@ -564,9 +619,16 @@ IntunePolicy/
 - Custom instructions are appended to the system prompt
 
 #### `frontend/src/App.tsx`
-- Three views: `policies` | `generating` | `results`
+- Tab navigation between **Policies** and **Conflict Analysis**
+- Three views within Policies tab: `policies` | `generating` | `results`
 - Generation runs sequentially (one policy at a time) for progress tracking
 - Original description is attached to results from the loaded policy list
+
+#### `frontend/src/components/ConflictAnalysis.tsx`
+- Stats cards showing total overlaps, conflicts, duplicates, and affected policies
+- Filter chips (All / Conflicts / Duplicates) and search
+- Expandable accordion rows with policy detail cards
+- Visual highlighting of conflicting values (red) vs. duplicates (amber)
 
 #### `frontend/src/components/DescriptionResult.tsx`
 - Two-column layout: original (read-only) vs. generated (editable)
@@ -632,22 +694,3 @@ Open the browser console (F12 > Console) and check for JavaScript errors. Common
 - The application uses the **Graph API Beta** - this can change without notice.
 - **ReadWrite permissions**: The application requests `DeviceManagementConfiguration.ReadWrite.All` to write descriptions back. This permission theoretically allows other changes - the application exclusively uses it for description updates via PATCH.
 - The application runs **locally** and only sends data to Microsoft Graph and Azure OpenAI. No data is transmitted to third parties.
-
----
-
-## Screenshots
-
-For complete documentation, the following screenshots are needed. See `docs/screenshots/SCREENSHOTS.md` for details on how to capture them.
-
-| # | Filename | Description |
-|---|----------|-------------|
-| 1 | `screenshot_01_login.png` | Login screen with "Sign in with Microsoft" button |
-| 2 | `screenshot_02_main_empty.png` | Main view after login, before loading policies |
-| 3 | `screenshot_03_policy_list.png` | Loaded policy list with search field and filter |
-| 4 | `screenshot_04_policies_selected.png` | Policy list with selected policies |
-| 5 | `screenshot_05_settings.png` | Settings modal with system prompt, template, custom instructions |
-| 6 | `screenshot_06_generating.png` | Progress bar during generation |
-| 7 | `screenshot_07_results_before_after.png` | Results view with before/after columns |
-| 8 | `screenshot_08_updated_policies.png` | Policies with "Updated in Intune" badge |
-
-> Place screenshots in `docs/screenshots/` and replace the HTML comment placeholders in this README with `![Description](docs/screenshots/filename.png)`.
